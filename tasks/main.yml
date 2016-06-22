@@ -18,8 +18,8 @@
     - restart php5-fpm
 
 
-- name: Set timvezone
-  replace: dest=/etc/php5/fpm/php.ini regexp='(;?)date.timezone(\s*)(.+)' replace='date.timezone  = {{ zabbix_server_timezone }}'
+- name: Set timezone
+  lineinfile: dest=/etc/php5/fpm/php.ini regexp='^date.timezone(\s*)(.+)' line='date.timezone  = {{ zabbix_server_timezone }}'
   notify:
     - restart php5-fpm
 
@@ -137,3 +137,11 @@
 
 - name: zabbix-server restarted
   service: name=zabbix-server state=restarted enabled=yes
+
+- name: php5-fpm restarted
+  service: name=php5-fpm state=restarted enabled=yes
+
+- name: nginx restarted
+  service: name=nginx state=restarted enabled=yes
+
+
