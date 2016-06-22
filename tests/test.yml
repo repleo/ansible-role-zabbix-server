@@ -1,0 +1,10 @@
+---
+- hosts: localhost
+  remote_user: root
+  roles:
+    - { role: ansible-role-zabbix-server,
+         zabbix_server_db_user: zabbix,
+         zabbix_server_db_password: P4SSword,
+         zabbix_server_db_host: localhost,
+         zabbix_server_db_name: zabbixdb,
+    }

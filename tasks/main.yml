@@ -1,0 +1,139 @@
+---
+# tasks file for ansible-role-rainloop/
+
+
+- name: set max_execution_time to 300 in php.ing
+  replace: dest=/etc/php5/fpm/php.ini regexp='max_execution_time(\s*)(.+)' replace='max_execution_time = 300'
+  notify:
+    - restart php5-fpm
+
+- name: set max_input_time to 300 in php.ing
+  replace: dest=/etc/php5/fpm/php.ini regexp='max_input_time(\s*)(.+)' replace='max_input_time = 300'
+  notify:
+    - restart php5-fpm
+
+- name: set always_populate_raw_post_data in php.ing
+  replace: dest=/etc/php5/fpm/php.ini regexp='(;?)always_populate_raw_post_data(\s*)(.+)' replace='always_populate_raw_post_data = -1'
+  notify:
+    - restart php5-fpm
+
+
+- name: Set timvezone
+  replace: dest=/etc/php5/fpm/php.ini regexp='(;?)date.timezone(\s*)(.+)' replace='date.timezone  = {{ zabbix_server_timezone }}'
+  notify:
+    - restart php5-fpm
+
+
+- name: set mixinput time to 300 in php.ing
+  replace: dest=/etc/php5/fpm/php.ini regexp='max_input_time(\s+)(.+)' replace='max_input_time = 300'
+  notify:
+    - restart php5-fpm
+
+- name: "Debian | Installing repository Debian"
+  apt_repository: repo="deb http://repo.zabbix.com/zabbix/{{ zabbix_server_version }}/debian/ {{ ansible_distribution_release }} main"
+                  state=present
+
+- name: "Debian | Installing repository Debian"
+  apt_repository: repo="deb-src http://repo.zabbix.com/zabbix/{{ zabbix_server_version }}/debian/ {{ ansible_distribution_release }} main"
+                  state=present
+
+- name: "Debian | Install gpg key"
+  apt_key: id=79EA5ED4
+           url=http://repo.zabbix.com/zabbix-official-repo.key
+
+
+- name: "Debian | Installing zabbix-server-pgsql"
+  apt: pkg=zabbix-server-pgsql
+       state=present
+       update_cache=yes
+
+- name: "Debian | Install php5-pgsql"
+  apt: pkg=php5-pgsql
+       state=present
+       update_cache=yes
+       cache_valid_time=3600
+
+- name: "Debian | Install zabbix-web"
+  apt:  pkg=zabbix-frontend-php
+        state=present
+        update_cache=yes
+        cache_valid_time=3600
+
+- name: "Configure zabbix-server"
+  template: src=zabbix/zabbix_server.conf.j2 dest=/etc/zabbix/zabbix_server.conf 
+         owner=zabbix group=zabbix mode=0644
+  notify: restart zabbix-server
+
+- name: "Create include dir zabbix-server"
+  file: path={{ zabbix_server_include }} 
+        owner=zabbix group=zabbix state=directory
+
+- name: "Configure zabbix-web"
+  template: src=zabbix/zabbix.conf.php.j2
+        dest=/etc/zabbix/web/zabbix.conf.php owner=zabbix group=zabbix mode=0644
+
+
+- name: Create the nginx configuration for zabbix
+  template: src=nginx/zabbix.j2 dest=/etc/nginx/sites-available/{{zabbix_server_hostname}}
+  notify:
+   - reload nginx
+
+
+- name: Create the links to enable rainloop configuration
+  file: path=/etc/nginx/sites-enabled/{{zabbix_server_hostname}} state=link src=/etc/nginx/sites-available/{{zabbix_server_hostname}}
+  notify:
+   - reload nginx
+
+
+
+# task file for postgresql
+- name: "Debian | Set some facts"
+  set_fact:
+    datafiles_path: /usr/share/zabbix-server-pgsql
+  when: zabbix_server_version != 3.0
+
+
+- name: "Debian | Set some facts for Zabbix 3.0"
+  set_fact:
+    datafiles_path: /usr/share/doc/zabbix-server-pgsql
+  when: zabbix_server_version == 3.0
+
+- name: "Set the correct delegated_db_host (to support postgres db deployment on a remote dbhost)"
+  set_fact:
+    delegated_dbhost: "{{ zabbix_server_db_host if (zabbix_server_db_host != 'localhost') else inventory_hostname }}"
+
+- name: "PostgreSQL | Create schema"
+  shell: "cd {{ datafiles_path }} && if [ -f create.sql.gz ]; then gunzip create.sql.gz ; fi && psql -h '{{ zabbix_server_db_host }}' -U '{{ zabbix_server_db_user }}' -d '{{ zabbix_server_db_name }}' -f create.sql && touch /etc/zabbix/schema.done"
+  args:
+    creates: /etc/zabbix/schema.done
+  environment:
+    PGPASSWORD: '{{ zabbix_server_db_password }}'
+  when: zabbix_server_version == 3.0 and zabbix_server_database_sqlload
+
+- name: "PostgreSQL | Importing schema file"
+  shell: "cd {{ datafiles_path }} && if [ -f schema.sql.gz ]; then gunzip schema.sql.gz ; fi && psql -h '{{ zabbix_server_db_host }}' -U '{{ zabbix_server_db_user }}' -d '{{ zabbix_server_db_name }}' -f schema.sql && touch /etc/zabbix/schema.done"
+  args:
+    creates: /etc/zabbix/schema.done
+  environment:
+    PGPASSWORD: '{{ zabbix_server_db_password }}'
+  when: (zabbix_server_version != 3.0 and zabbix_server_database_sqlload) or (zabbix_server_repo == "epel" and zabbix_server_database_sqlload)
+
+- name: "PostgreSQL | Importing images file"
+  shell: "cd {{ datafiles_path }} && psql -h '{{ zabbix_server_db_host }}' -U '{{ zabbix_server_db_user }}' -d '{{ zabbix_server_db_name }}' -f images.sql && touch /etc/zabbix/images.done"
+  args:
+    creates: /etc/zabbix/images.done
+  environment:
+    PGPASSWORD: '{{ zabbix_server_db_password }}'
+  when: (zabbix_server_version != 3.0 and zabbix_server_database_sqlload) or (zabbix_server_repo == "epel" and zabbix_server_database_sqlload)
+
+- name: "PostgreSQL | Importing data file"
+  shell: "cd {{ datafiles_path }} && psql -h '{{ zabbix_server_dbhost }}' -U '{{ zabbix_server_db_user }}' -d '{{ zabbix_server_db_name }}' -f data.sql && touch /etc/zabbix/data.done"
+  args:
+    creates: /etc/zabbix/data.done
+  environment:
+    PGPASSWORD: '{{ zabbix_server_db_password }}'
+  when: (zabbix_server_database_sqlload and zabbix_server_version != 3.0) or (zabbix_server_repo == "epel" and zabbix_server_database_sqlload)
+
+
+- name: zabbix-server restarted
+  service: name=zabbix-server state=restarted enabled=yes

@@ -1,0 +1,35 @@
+---
+galaxy_info:
+  author: Jeroen Arnoldus
+  description: Ansible role for installing zabbix monitoring server 
+  company: Repleo, Amstelveen, Holland
+  license: GPLv3
+  min_ansible_version: 2.0
+  platforms:
+    - name: Ubuntu
+      versions:
+        - all
+    - name: Debian
+      versions:
+        - all
+  galaxy_tags:
+    - rainloop
+    - mail
+    - server
+dependencies:
+     - { role: "repleo.nginx",
+               create_nginx_conf: false,
+               nginx_sites: []
+       }
+     - { role: "repleo.postgresql",
+            databases: [
+              { name: "{{ zabbix_server_db_name }}",
+                users: [
+                  { user: "{{ zabbix_server_db_user }}",
+                    password: "{{ zabbix_server_db_password }}",
+                    privileges: ALL,
+                    type: database }
+                ]
+              }
+            ]
+       }

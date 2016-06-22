@@ -1,0 +1,41 @@
+{% if zabbix_server_ssl and zabbix_server_redirect_http_to_https %}
+server {
+  listen *:80;
+  listen [::]:80;
+  server_name {{zabbix_server_hostname}};
+  return 301 https://$host$request_uri;
+}
+{% endif %}
+
+server {
+{% if zabbix_server_ssl %}
+    listen *:443 ssl;
+    listen [::]:443 ssl;
+    ssl_certificate {{ zabbix_server_ssl_certificate }};
+    ssl_certificate_key {{ zabbix_server_ssl_certificate_key }};
+{% else %}
+    listen *:80;
+    listen [::]:80;
+{% endif %}
+    server_name {{zabbix_server_hostname}};
+
+    access_log  /var/log/nginx/{{zabbix_server_hostname}}.access.log;
+    error_log  /var/log/nginx/{{zabbix_server_hostname}}.error.log;
+
+
+    root  /usr/share/zabbix;
+    try_files $uri $uri/ /index.php?$args;
+    index index.php index.html index.htm;
+
+    client_max_body_size 100M;
+
+    location ^~ /data {
+        deny all;
+    }
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php5-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+}
