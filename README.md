@@ -1,8 +1,8 @@
 Ansible role - Zabbix Server Monitor installer
 =====
 
-[![Build Status](https://travis-ci.org/repleo/ansible-role-rainloop.svg?branch=master)](https://travis-ci.org/repleo/ansible-role-rainloop)
-[![Ansible Galaxy](http://img.shields.io/badge/galaxy-repleo.rainloop-660198.svg?style=flat)](https://galaxy.ansible.com/repleo/rainloop)
+[![Build Status](https://travis-ci.org/repleo/ansible-role-zabbix-server.svg?branch=master)](https://travis-ci.org/repleo/ansible-role-zabbix-server)
+[![Ansible Galaxy](http://img.shields.io/badge/galaxy-repleo.zabbix-server-660198.svg?style=flat)](https://galaxy.ansible.com/repleo/zabbix-server)
 
 This role install and configures zabbix-server. Zabbix is the ultimate enterprise-class monitoring platform.
 Zabbix is the ultimate enterprise-level software designed for real-time monitoring of millions of metrics collected from tens of thousands of servers, virtual machines and network devices.
