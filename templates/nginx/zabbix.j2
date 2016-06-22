@@ -1,6 +1,6 @@
 {% if zabbix_server_ssl and zabbix_server_redirect_http_to_https %}
 server {
-  listen *:80;
+  listen 0.0.0.0:80;
   listen [::]:80;
   server_name {{zabbix_server_hostname}};
   return 301 https://$host$request_uri;
@@ -9,12 +9,12 @@ server {
 
 server {
 {% if zabbix_server_ssl %}
-    listen *:443 ssl;
+    listen 0.0.0.0:443 ssl;
     listen [::]:443 ssl;
     ssl_certificate {{ zabbix_server_ssl_certificate }};
     ssl_certificate_key {{ zabbix_server_ssl_certificate_key }};
 {% else %}
-    listen *:80;
+    listen 0.0.0.0:80;
     listen [::]:80;
 {% endif %}
     server_name {{zabbix_server_hostname}};

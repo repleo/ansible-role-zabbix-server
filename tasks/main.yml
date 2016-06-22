@@ -1,6 +1,17 @@
 ---
-# tasks file for ansible-role-rainloop/
+# tasks file for ansible-role-zabbix-server/
 
+- name: Install base packages
+  action: apt pkg={{item}} state=present
+  with_items:
+  - curl
+  - php5-sqlite
+  - php5-pgsql
+  - php5-mysql
+  - php5-fpm
+  - php5-gd
+  - php5-cli
+  - php5-curl
 
 - name: set max_execution_time to 300 in php.ing
   replace: dest=/etc/php5/fpm/php.ini regexp='max_execution_time(\s*)(.+)' replace='max_execution_time = 300'
